@@ -8,18 +8,13 @@ import StatsRow from '@/components/StatsRow'
 import TokenTable from '@/components/TokenTable'
 import TrendingGrid from '@/components/TrendingGrid'
 import PriceChart from '@/components/PriceChart'
-import AuctionTable from '@/components/AuctionTable'
-import VaultTable from '@/components/VaultTable'
+// Auction & Vault removed
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('new')
   const [tokens, setTokens] = useState<TokenEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedToken, setSelectedToken] = useState<TokenEvent | null>(null)
-  const [auctionPoolId, setAuctionPoolId] = useState('')
-  const [auctionState, setAuctionState] = useState<any>(null)
-  const [vaultData, setVaultData] = useState<any>(null)
-  const [airdropData, setAirdropData] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [ethPrice] = useState(2700)
 
@@ -44,36 +39,9 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [fetchTokens])
 
-  // Fetch auction state
-  const fetchAuction = useCallback(async (poolId: string) => {
-    if (!poolId || !poolId.startsWith('0x')) return
-    try {
-      const res = await fetch(`/api/auction/${poolId}`)
-      const json = await res.json()
-      if (json.success) setAuctionState(json.data)
-    } catch {}
-  }, [])
-
-  // Fetch vault + airdrop
-  const fetchVaultAndAirdrop = useCallback(async (address: string) => {
-    try {
-      const res = await fetch(`/api/token/${address}`)
-      const json = await res.json()
-      if (json.success) {
-        setVaultData(json.data.event)
-        // Separate vault/airdrop from token info
-        try {
-          const { getVaultAllocation, getAirdropInfo } = await import('@/lib/liquid')
-          // These are server-side; we'd need dedicated API routes for them
-        } catch {}
-      }
-    } catch {}
-  }, [])
-
   const handleTokenSelect = (token: TokenEvent) => {
     setSelectedToken(token)
     setActiveTab('chart')
-    setAuctionPoolId(token.poolId)
 
     // Generate mock chart data based on startingTick
     const mockData: any[] = []
@@ -221,90 +189,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* SNIPER AUCTION */}
-          {activeTab === 'auction' && (
-            <div className="space-y-6">
-              <div className="bg-dark-card rounded-xl border border-dark-border p-6">
-                <label className="block text-sm text-text-secondary mb-2">
-                  Enter Pool ID to check auction state
-                </label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={auctionPoolId}
-                    onChange={(e) => setAuctionPoolId(e.target.value)}
-                    placeholder="0x..."
-                    className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-4 py-2.5 mono text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-green/50"
-                  />
-                  <button
-                    onClick={() => fetchAuction(auctionPoolId)}
-                    className="px-6 py-2.5 bg-accent-green/10 border border-accent-green/30 rounded-lg text-accent-green mono text-sm hover:bg-accent-green/20 transition-colors"
-                  >
-                    Fetch
-                  </button>
-                </div>
-                {selectedToken && (
-                  <div className="mt-3 text-xs text-text-muted">
-                    From selected token:{' '}
-                    <button
-                      onClick={() => setAuctionPoolId(selectedToken.poolId)}
-                      className="text-accent-green hover:underline mono"
-                    >
-                      {selectedToken.poolId}
-                    </button>
-                  </div>
-                )}
-              </div>
-              <AuctionTable state={auctionState} poolId={auctionPoolId} />
-            </div>
-          )}
-
-          {/* VAULT & AIRDROP */}
-          {activeTab === 'vault' && (
-            <div className="space-y-6">
-              <div className="bg-dark-card rounded-xl border border-dark-border p-6">
-                <label className="block text-sm text-text-secondary mb-2">
-                  Enter Token Address to check vault & airdrop
-                </label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={selectedToken?.tokenAddress || ''}
-                    onChange={() => {}}
-                    placeholder="0x..."
-                    className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-4 py-2.5 mono text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-green/50"
-                  />
-                  <button
-                    onClick={() => selectedToken && fetchVaultAndAirdrop(selectedToken.tokenAddress)}
-                    className="px-6 py-2.5 bg-accent-green/10 border border-accent-green/30 rounded-lg text-accent-green mono text-sm hover:bg-accent-green/20 transition-colors"
-                  >
-                    Fetch
-                  </button>
-                </div>
-                {tokens.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {tokens.slice(0, 5).map((t: TokenEvent) => (
-                      <button
-                        key={t.tokenAddress}
-                        onClick={() => {
-                          setSelectedToken(t)
-                          fetchVaultAndAirdrop(t.tokenAddress)
-                        }}
-                        className="px-3 py-1 bg-dark-border rounded text-xs mono text-text-secondary hover:text-accent-green transition-colors"
-                      >
-                        {t.tokenSymbol}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <VaultTable
-                vault={vaultData}
-                airdrop={airdropData}
-                tokenAddress={selectedToken?.tokenAddress}
-              />
-            </div>
-          )}
+          {/* END OF TABS */}
         </div>
 
         {/* Footer */}

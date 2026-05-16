@@ -11,8 +11,6 @@ export default function NavTabs({
     { id: 'new', label: 'New Tokens' },
     { id: 'trending', label: 'Trending' },
     { id: 'chart', label: 'Chart' },
-    { id: 'auction', label: 'Sniper Auction' },
-    { id: 'vault', label: 'Vault & Airdrop' },
   ]
 
   return (
