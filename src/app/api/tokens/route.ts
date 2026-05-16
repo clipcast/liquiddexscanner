@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server'
-import { getAllTokens } from '@/lib/liquid'
+import { getLiquid } from '@/lib/liquid'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 10
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const deployer = searchParams.get('deployer') || undefined
-
   try {
-    const tokens = await getAllTokens()
+    const liquid = getLiquid()
+    const latestBlock = await liquid.publicClient.getBlockNumber()
+    const fromBlock = latestBlock - 200000n // last ~200K blocks
+    const tokens = await liquid.getTokens({ fromBlock, toBlock: 'latest' })
     return NextResponse.json({
       success: true,
       count: tokens.length,
+      currentBlock: latestBlock.toString(),
       data: tokens,
     })
   } catch (err: unknown) {
