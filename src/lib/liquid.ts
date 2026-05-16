@@ -2,7 +2,6 @@ import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
 import { LiquidSDK } from 'liquid-sdk'
 
-// @ts-expect-error — process.env
 const RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org'
 
 let _publicClient: ReturnType<typeof createPublicClient> | null = null
