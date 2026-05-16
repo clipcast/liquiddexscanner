@@ -9,11 +9,11 @@ interface TokenEvent {
   poolId: string
   blockNumber?: string | bigint
   msgSender: string
-  poolHook?: string
-  locker?: string
-  pairedToken?: string
-  mevModule?: string
-  extensions?: string[]
+  poolHook: string
+  locker: string
+  pairedToken: string
+  mevModule: string
+  extensions: string[]
 }
 
 export default function TrendingGrid({

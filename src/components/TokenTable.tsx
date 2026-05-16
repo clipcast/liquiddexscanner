@@ -13,7 +13,7 @@ interface TokenEvent {
   pairedToken: string
   mevModule: string
   extensions: string[]
-  blockNumber?: string
+  blockNumber?: string | bigint
 }
 
 export default function TokenTable({

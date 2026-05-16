@@ -25,3 +25,14 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Dependencies
+node_modules/
+.yarn/
+yarn-error.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
