@@ -1,0 +1,27 @@
+# Learn more: https://nextjs.org/docs/going-to-production#reducing-bundle-size
+
+# Sentry
+.sentryclirc
+
+# Next.js
+.next/
+out/
+
+# ESLint
+.eslintcache
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

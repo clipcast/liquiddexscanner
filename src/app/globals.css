@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark-bg: #080c10;
+  --color-dark-card: #0f1519;
+  --color-dark-border: #1a2228;
+  --color-accent-green: #00e68c;
+  --color-accent-green-dim: #00995c;
+  --color-text-primary: #e8edf0;
+  --color-text-secondary: #7b8794;
+  --color-text-muted: #4a5568;
+  --color-red-bid: #ff4444;
+  --color-blue-buy: #4488ff;
+  --font-mono: "Space Mono", "SF Mono", "Courier New", monospace;
+  --font-display: "Syne", "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    background-color: var(--color-dark-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--color-dark-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--color-dark-border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+}
+
+@utility mono { font-family: var(--font-mono); }
+@utility text-accent { color: var(--color-accent-green); }
+@utility bg-card { background-color: var(--color-dark-card); }
+@utility border-card { border-color: var(--color-dark-border); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@utility animate-pulse-dot {
+  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@utility animate-ticker {
+  animation: ticker-scroll 30s linear infinite;
+}
