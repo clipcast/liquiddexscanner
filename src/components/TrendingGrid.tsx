@@ -1,20 +1,6 @@
 'use client'
 
-interface TokenEvent {
-  tokenName: string
-  tokenSymbol: string
-  tokenAddress: string
-  tokenImage: string
-  startingTick: number
-  poolId: string
-  blockNumber?: string | bigint
-  msgSender: string
-  poolHook: string
-  locker: string
-  pairedToken: string
-  mevModule: string
-  extensions: string[]
-}
+import type { TokenEvent } from '@/lib/types'
 
 export default function TrendingGrid({
   tokens,

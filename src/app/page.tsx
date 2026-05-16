@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import type { TokenEvent } from '@/lib/types'
 import TickerTape from '@/components/TickerTape'
 import NavTabs from '@/components/NavTabs'
 import StatsRow from '@/components/StatsRow'
@@ -9,22 +10,6 @@ import TrendingGrid from '@/components/TrendingGrid'
 import PriceChart from '@/components/PriceChart'
 import AuctionTable from '@/components/AuctionTable'
 import VaultTable from '@/components/VaultTable'
-
-interface TokenEvent {
-  tokenName: string
-  tokenSymbol: string
-  tokenAddress: string
-  tokenImage: string
-  startingTick: number
-  poolHook: string
-  poolId: string
-  msgSender: string
-  locker: string
-  pairedToken: string
-  mevModule: string
-  extensions: string[]
-  blockNumber?: string
-}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('new')
