@@ -2,6 +2,7 @@ import { createPublicClient, http } from 'viem'
 import { base } from 'viem/chains'
 import { LiquidSDK } from 'liquid-sdk'
 
+// @ts-expect-error — process.env
 const RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org'
 
 let _publicClient: ReturnType<typeof createPublicClient> | null = null
@@ -9,6 +10,7 @@ let _liquid: LiquidSDK | null = null
 
 function getPublicClient() {
   if (!_publicClient) {
+    // @ts-expect-error - viem version mismatch with liquid-sdk
     _publicClient = createPublicClient({
       chain: base,
       transport: http(RPC_URL),
