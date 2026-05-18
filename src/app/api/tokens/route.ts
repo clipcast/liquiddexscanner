@@ -1,23 +1,54 @@
 import { NextResponse } from 'next/server'
-import { getLiquid } from '@/lib/liquid'
+import { createPublicClient, http } from 'viem'
+import { base } from 'viem/chains'
+import { LiquidSDK } from '@liquid-protocol/sdk' // pastikan ini sesuai package kamu
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 10
+const RPC_URL =
+  process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org'
 
-export async function GET(request: Request) {
+// 🔥 CONTRACT CONFIG (WAJIB)
+const CONTRACTS = {
+  factory: '0x04F1a284168743759BE6554f607a10CEBdB77760',
+}
+
+export async function GET() {
   try {
-    const liquid = getLiquid()
-    const latestBlock = await liquid.publicClient.getBlockNumber()
-    const fromBlock = latestBlock - 200000n // last ~200K blocks
-    const tokens = await liquid.getTokens({ fromBlock, toBlock: 'latest' })
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http(RPC_URL),
+    })
+
+    // 🔥 Inject contract ke SDK
+    const liquid = new LiquidSDK({
+      publicClient,
+      contracts: CONTRACTS,
+    })
+
+    const latestBlock = await publicClient.getBlockNumber()
+
+    // 🔥 FIX RANGE (PENTING BANGET)
+    const fromBlock = 0n // scan dari awal biar pasti dapet
+
+    console.log('latestBlock:', latestBlock.toString())
+    console.log('fromBlock:', fromBlock.toString())
+
+    const tokens = await liquid.getTokens({
+      fromBlock,
+      toBlock: 'latest',
+    })
+
+    console.log('tokens found:', tokens.length)
+
     return NextResponse.json({
       success: true,
-      count: tokens.length,
-      currentBlock: latestBlock.toString(),
-      data: tokens,
+      tokens,
     })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch tokens'
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+  } catch (error) {
+    console.error('API ERROR:', error)
+
+    return NextResponse.json({
+      success: false,
+      error: 'failed to fetch tokens',
+    })
   }
 }
