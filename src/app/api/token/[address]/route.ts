@@ -1,55 +1,30 @@
 import { NextResponse } from 'next/server'
-import { createPublicClient, http } from 'viem'
-import { base } from 'viem/chains'
-import { LiquidSDK } from 'liquid-sdk'
+import { getTokenEvent, getTokenInfo, getTokenRewards } from '@/lib/liquid'
 
-const RPC_URL =
-  process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org'
+export const dynamic = 'force-dynamic'
 
-const CONTRACTS = {
-  factory: '0x04F1a284168743759BE6554f607a10CEBdB77760',
-}
+export async function GET(
+  request: Request,
+  { params }: { params: { address: string } }
+) {
+  const address = params.address as `0x${string}`
+  if (!address || !address.startsWith('0x') || address.length !== 42) {
+    return NextResponse.json({ success: false, error: 'Invalid address' }, { status: 400 })
+  }
 
-const SCAN_RANGE = 50_000n
-
-export async function GET() {
   try {
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(RPC_URL),
-    })
-
-    const liquid = new LiquidSDK({
-      publicClient,
-      contracts: CONTRACTS,
-    })
-
-    const latestBlock = await publicClient.getBlockNumber()
-    const fromBlock = latestBlock > SCAN_RANGE ? latestBlock - SCAN_RANGE : 0n
-
-    console.log('latestBlock:', latestBlock.toString())
-    console.log('fromBlock:', fromBlock.toString())
-
-    const tokens = await liquid.getTokens({
-      fromBlock,
-      toBlock: 'latest',
-    })
-
-    console.log('tokens found:', tokens.length)
+    const [event, info, rewards] = await Promise.all([
+      getTokenEvent(address),
+      getTokenInfo(address),
+      getTokenRewards(address),
+    ])
 
     return NextResponse.json({
       success: true,
-      data: tokens,
+      data: { event, info, rewards },
     })
-  } catch (error) {
-    console.error('API ERROR:', error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'failed to fetch tokens',
-      },
-      { status: 500 }
-    )
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch token'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
