@@ -6,7 +6,8 @@ import { LiquidSDK } from 'liquid-sdk'
 const RPC_URL =
   process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org'
 
-const SCAN_RANGE = 50_000n
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
   try {
@@ -15,18 +16,11 @@ export async function GET() {
       transport: http(RPC_URL),
     })
 
+    // Sesuai docs: cukup pass publicClient, tidak perlu contracts
     const liquid = new LiquidSDK({ publicClient })
 
-    const latestBlock = await publicClient.getBlockNumber()
-    const fromBlock = latestBlock > SCAN_RANGE ? latestBlock - SCAN_RANGE : 0n
-
-    console.log('latestBlock:', latestBlock.toString())
-    console.log('fromBlock:', fromBlock.toString())
-
-    const tokens = await liquid.getTokens({
-      fromBlock,
-      toBlock: 'latest',
-    })
+    // Sesuai docs: getTokens() tanpa parameter → ambil semua token Liquid Protocol
+    const tokens = await liquid.getTokens()
 
     console.log('tokens found:', tokens.length)
 
@@ -36,9 +30,8 @@ export async function GET() {
     })
   } catch (error) {
     console.error('API ERROR:', error)
-
     return NextResponse.json(
-      { success: false, error: 'failed to fetch tokens' },
+      { success: false, error: String(error) },
       { status: 500 }
     )
   }
