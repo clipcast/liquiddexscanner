@@ -1,33 +1,47 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import type { TokenEvent } from '@/lib/types'
+import type { TokenCreatedEvent } from 'liquid-sdk'
 import TickerTape from '@/components/TickerTape'
 import NavTabs from '@/components/NavTabs'
 import StatsRow from '@/components/StatsRow'
 import TokenTable from '@/components/TokenTable'
 import TrendingGrid from '@/components/TrendingGrid'
 import PriceChart from '@/components/PriceChart'
-// Auction & Vault removed
+
+// Gunakan tipe dari liquid-sdk langsung, lebih akurat dari tipe lokal
+type Token = TokenCreatedEvent
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('new')
-  const [tokens, setTokens] = useState<TokenEvent[]>([])
+  const [tokens, setTokens] = useState<Token[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedToken, setSelectedToken] = useState<TokenEvent | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [ethPrice] = useState(2700)
 
-  // Fetch all tokens
   const fetchTokens = useCallback(async () => {
     try {
-      const res = await fetch('/api/tokens')
-      const json = await res.json()
-      if (json.success) {
-        setTokens((json.data || []).reverse())
+      setError(null)
+      const res = await fetch('/api/tokens', { cache: 'no-store' })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
       }
+
+      const json = await res.json()
+
+      if (!json.success) {
+        throw new Error(json.error || 'API failed')
+      }
+
+      const list: Token[] = json.data || []
+      // Token terbaru di atas
+      setTokens([...list].reverse())
     } catch (err) {
       console.error('Failed to fetch tokens:', err)
+      setError(err instanceof Error ? err.message : 'Gagal memuat token')
     } finally {
       setLoading(false)
     }
@@ -35,15 +49,16 @@ export default function Home() {
 
   useEffect(() => {
     fetchTokens()
-    const interval = setInterval(fetchTokens, 10000)
+    // Refresh tiap 30 detik (lebih hemat RPC calls)
+    const interval = setInterval(fetchTokens, 30_000)
     return () => clearInterval(interval)
   }, [fetchTokens])
 
-  const handleTokenSelect = (token: TokenEvent) => {
+  const handleTokenSelect = (token: Token) => {
     setSelectedToken(token)
     setActiveTab('chart')
 
-    // Generate mock chart data based on startingTick
+    // Generate mock chart data berdasarkan startingTick
     const mockData: any[] = []
     const basePrice = Math.max(0.000001, Math.abs(token.startingTick) / 100000)
     for (let i = 0; i < 24; i++) {
@@ -56,25 +71,23 @@ export default function Home() {
     setChartData(mockData)
   }
 
-  // Stats summary
-  const avgTick = tokens.length > 0
-    ? tokens.reduce((s: number, t: TokenEvent) => s + Math.abs(t.startingTick), 0) / tokens.length
-    : 0
+  const avgTick =
+    tokens.length > 0
+      ? tokens.reduce((s, t) => s + Math.abs(t.startingTick), 0) / tokens.length
+      : 0
 
   const stats = [
     { label: 'Total Tokens', value: tokens.length.toLocaleString(), color: 'text-accent-green' },
     { label: 'Avg Starting Tick', value: Math.round(avgTick).toLocaleString(), color: 'text-text-primary' },
-    { label: 'Active Pools', value: tokens.filter((t: TokenEvent) => t.poolId).length.toLocaleString(), color: 'text-text-primary' },
-    { label: 'Unique Deployers', value: new Set(tokens.map((t: TokenEvent) => t.msgSender)).size.toLocaleString(), color: 'text-text-primary' },
+    { label: 'Active Pools', value: tokens.filter(t => t.poolId).length.toLocaleString(), color: 'text-text-primary' },
+    { label: 'Unique Deployers', value: new Set(tokens.map(t => t.msgSender)).size.toLocaleString(), color: 'text-text-primary' },
     { label: 'ETH Price', value: `$${ethPrice}`, sub: 'Base mainnet', color: 'text-text-primary' },
   ]
 
   return (
     <div className="min-h-screen bg-dark-bg">
-      {/* Ticker */}
       <TickerTape />
 
-      {/* Top Bar */}
       <header className="border-b border-dark-border">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -103,15 +116,12 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Nav Tabs */}
         <NavTabs active={activeTab} onChange={setActiveTab} />
 
-        {/* Stats Row */}
         <div className="mt-6">
           <StatsRow stats={stats} />
         </div>
 
-        {/* Tab Content */}
         <div className="mt-6">
           {/* NEW TOKENS */}
           {activeTab === 'new' && (
@@ -124,24 +134,38 @@ export default function Home() {
                     ({tokens.length} deployed)
                   </span>
                 </h2>
-                <div className="flex gap-2">
-                  {['1m', '5m', '1h', '6h'].map((f) => (
-                    <button
-                      key={f}
-                      className="px-3 py-1.5 text-xs mono rounded-md bg-dark-border text-text-secondary hover:text-text-primary transition-colors"
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={fetchTokens}
+                  className="px-3 py-1.5 text-xs mono rounded-md bg-dark-border text-text-secondary hover:text-accent-green transition-colors"
+                >
+                  ↻ Refresh
+                </button>
               </div>
+
               {loading ? (
                 <div className="text-center py-16 text-text-muted">
                   <div className="w-8 h-8 border-2 border-accent-green border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  Loading tokens from Liquid Protocol...
+                  Memuat token dari Liquid Protocol...
+                </div>
+              ) : error ? (
+                <div className="text-center py-16">
+                  <p className="text-red-400 mb-3 mono text-sm">{error}</p>
+                  <button
+                    onClick={fetchTokens}
+                    className="px-4 py-2 text-sm rounded-md bg-accent-green/10 text-accent-green hover:bg-accent-green/20 transition-colors"
+                  >
+                    Coba Lagi
+                  </button>
+                </div>
+              ) : tokens.length === 0 ? (
+                <div className="text-center py-16 text-text-muted">
+                  <p className="mono text-sm">Tidak ada token ditemukan dalam range block ini.</p>
+                  <p className="text-xs mt-2 text-text-muted">
+                    Cek console browser untuk detail error.
+                  </p>
                 </div>
               ) : (
-                <TokenTable tokens={tokens} onSelect={handleTokenSelect} />
+                <TokenTable tokens={tokens as any} onSelect={handleTokenSelect as any} />
               )}
             </div>
           )}
@@ -150,11 +174,9 @@ export default function Home() {
           {activeTab === 'trending' && (
             <div>
               <h2 className="text-lg font-semibold mb-4">Trending Tokens</h2>
-              <TrendingGrid tokens={tokens} onSelect={handleTokenSelect} />
-              <h3 className="text-md font-semibold mb-3 mt-8 text-text-secondary">
-                Top by Volume
-              </h3>
-              <TokenTable tokens={tokens} onSelect={handleTokenSelect} />
+              <TrendingGrid tokens={tokens as any} onSelect={handleTokenSelect as any} />
+              <h3 className="text-md font-semibold mb-3 mt-8 text-text-secondary">Top by Volume</h3>
+              <TokenTable tokens={tokens as any} onSelect={handleTokenSelect as any} />
             </div>
           )}
 
@@ -188,11 +210,8 @@ export default function Home() {
               )}
             </div>
           )}
-
-          {/* END OF TABS */}
         </div>
 
-        {/* Footer */}
         <footer className="mt-12 py-6 border-t border-dark-border text-center text-sm text-text-muted">
           <p>
             Built with{' '}
