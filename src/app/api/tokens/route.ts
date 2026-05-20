@@ -4,13 +4,14 @@ import { base } from 'viem/chains'
 import { LiquidSDK } from 'liquid-sdk'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60 // max untuk Vercel Pro, diabaikan di Hobby
+export const maxDuration = 60
+
+// Block pertama token Liquid Protocol di-deploy
+// TX: 0x6ac41c71c7a4394b3de85ca95dfae1d58dcc664fcdce1f9c3a67734747ea63c9
+// Block: 44_445_784
+const LIQUID_DEPLOY_BLOCK = 44_445_784n
 
 const RPC_URL = process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org'
-
-// Factory deploy di Base sekitar block 29_700_000 (Mei 2025)
-// Scan 100k block terakhir saja agar tidak timeout
-const SCAN_RANGE = 100_000n
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -19,24 +20,21 @@ export async function GET(request: Request) {
   try {
     const publicClient = createPublicClient({
       chain: base,
-      transport: http(RPC_URL),
+      transport: http(RPC_URL, {
+        timeout: 55_000,
+      }),
     })
 
     const liquid = new LiquidSDK({ publicClient })
 
     const latestBlock = await publicClient.getBlockNumber()
 
-    // Kalau ada query param fromBlock, gunakan itu (untuk pagination)
-    // Kalau tidak, scan 100k block terakhir
     const fromBlock = fromBlockParam
       ? BigInt(fromBlockParam)
-      : latestBlock > SCAN_RANGE
-        ? latestBlock - SCAN_RANGE
-        : 0n
+      : LIQUID_DEPLOY_BLOCK
 
-    const toBlock = latestBlock
-
-    console.log(`Scanning blocks ${fromBlock} → ${toBlock}`)
+    console.log(`Scanning blocks ${fromBlock} → ${latestBlock}`)
+    console.log(`Range: ${(latestBlock - fromBlock).toLocaleString()} blocks`)
 
     const tokens = await liquid.getTokens({ fromBlock, toBlock: 'latest' })
 
@@ -47,12 +45,12 @@ export async function GET(request: Request) {
       data: tokens,
       meta: {
         fromBlock: fromBlock.toString(),
-        toBlock: toBlock.toString(),
+        toBlock: latestBlock.toString(),
         count: tokens.length,
       },
     })
   } catch (error) {
-    console.error('API ERROR:', error)
+    console.error('API ERROR:', String(error))
     return NextResponse.json(
       { success: false, error: String(error) },
       { status: 500 }
