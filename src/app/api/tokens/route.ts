@@ -70,7 +70,7 @@ export async function GET() {
 
     // Filter null, sort terbaru dulu
     const final = enriched
-      .filter(Boolean)
+      .filter((t): t is NonNullable<typeof t> => t !== null)
       .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
 
     return NextResponse.json({
