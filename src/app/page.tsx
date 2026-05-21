@@ -1,20 +1,18 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { fetchTokens } from '@/lib/api'
 import type { TokenEvent } from '@/lib/types'
 import NavTabs from '@/components/NavTabs'
 import TokenTable from '@/components/TokenTable'
 
-type PriceData = {
-  price_usd: string | null
-  market_cap_usd: string | null
-  volume_usd_h24: string | null
+type EnrichedToken = TokenEvent & {
+  totalSupply?: string | null
+  decimals?: number
+  createdAt?: number | null
 }
 
 export default function Home() {
-  const [tokens, setTokens] = useState<TokenEvent[]>([])
-  const [prices, setPrices] = useState<Record<string, PriceData>>({})
+  const [tokens, setTokens] = useState<EnrichedToken[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('new')
@@ -23,48 +21,16 @@ export default function Home() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchTokens()
-      if (!data || data.length === 0) throw new Error('Tidak ada token ditemukan')
-      // Sort terbaru dulu berdasarkan blockNumber
-      const sorted = [...data].sort(
-        (a: TokenEvent, b: TokenEvent) =>
-          Number(b.blockNumber ?? 0) - Number(a.blockNumber ?? 0)
-      )
-      setTokens(sorted)
+      const res = await fetch('/api/tokens', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'API failed')
+      setTokens(json.data || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat token')
     } finally {
       setLoading(false)
     }
-  }, [])
-
-  // Fetch harga dari GeckoTerminal (20 token pertama)
-  const loadPrices = useCallback(async (list: TokenEvent[]) => {
-    const slice = list.slice(0, 20)
-    const results: Record<string, PriceData> = {}
-
-    await Promise.allSettled(
-      slice.map(async (token) => {
-        try {
-          const res = await fetch(
-            `https://api.geckoterminal.com/api/v2/networks/base/tokens/${token.tokenAddress}`,
-            { headers: { Accept: 'application/json;version=20230302' } }
-          )
-          if (!res.ok) return
-          const json = await res.json()
-          const attr = json?.data?.attributes
-          if (attr) {
-            results[token.tokenAddress] = {
-              price_usd: attr.price_usd ?? null,
-              market_cap_usd: attr.market_cap_usd ?? null,
-              volume_usd_h24: attr.volume_usd?.h24 ?? null,
-            }
-          }
-        } catch { /* skip */ }
-      })
-    )
-
-    setPrices(results)
   }, [])
 
   useEffect(() => {
@@ -73,11 +39,7 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [loadTokens])
 
-  useEffect(() => {
-    if (tokens.length > 0) loadPrices(tokens)
-  }, [tokens, loadPrices])
-
-  // Tab new = 50 terbaru, all = semua
+  // new = 50 terbaru, all = semua
   const displayed = activeTab === 'new' ? tokens.slice(0, 50) : tokens
 
   return (
@@ -86,7 +48,7 @@ export default function Home() {
       <header className="border-b border-dark-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-accent-green/10 flex items-center justify-center">
-            <span className="text-accent-green font-bold">⬡</span>
+            <span className="text-accent-green font-bold text-lg">⬡</span>
           </div>
           <div>
             <h1 className="font-bold text-lg text-text-primary">
@@ -110,7 +72,9 @@ export default function Home() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <div className="w-8 h-8 border-2 border-accent-green border-t-transparent rounded-full animate-spin" />
-              <p className="text-text-muted text-sm">Memuat token dari Liquid Protocol...</p>
+              <p className="text-text-muted text-sm">
+                Memuat token dari Liquid Protocol...
+              </p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -125,13 +89,12 @@ export default function Home() {
           ) : (
             <TokenTable
               tokens={displayed}
-              prices={prices}
-              onSelect={(token) => {
+              onSelect={(token) =>
                 window.open(
                   `https://app.liquidprotocol.org/tokens/${token.tokenAddress}`,
                   '_blank'
                 )
-              }}
+              }
             />
           )}
         </div>
